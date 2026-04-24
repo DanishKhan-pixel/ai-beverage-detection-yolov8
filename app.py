@@ -68,76 +68,6 @@ def count_beverage_like_from_generic(result, names: dict | list) -> Counter:
     return counts
 
 
-def _label_from_names(names: dict | list, cls_id: int) -> str:
-    return names[int(cls_id)] if isinstance(names, dict) else names[int(cls_id)]
-
-
-def detect_bottle_boxes(generic_model: YOLO, image_path: str, conf: float):
-    result, used_conf = infer_with_fallback(
-        generic_model,
-        image_path,
-        conf,
-        imgsz=960,
-        iou=0.45,
-        min_conf=0.05,
-    )
-    boxes = []
-    if result.boxes is None or len(result.boxes) == 0:
-        return boxes, result, used_conf
-
-    for cls_id, xyxy in zip(result.boxes.cls.tolist(), result.boxes.xyxy.tolist()):
-        label = _label_from_names(generic_model.names, int(cls_id))
-        if label == "bottle":
-            x1, y1, x2, y2 = [int(v) for v in xyxy]
-            boxes.append((x1, y1, x2, y2))
-    return boxes, result, used_conf
-
-
-def classify_bottles_with_trained_model(image_path: str, bottle_boxes: list[tuple[int, int, int, int]], model: YOLO):
-    image = cv2.imread(image_path)
-    if image is None:
-        return Counter(), None
-
-    allowed_labels = {"CocaCola", "Sprite"}
-    counts: Counter = Counter()
-
-    for x1, y1, x2, y2 in bottle_boxes:
-        h, w = image.shape[:2]
-        x1c, y1c = max(0, x1), max(0, y1)
-        x2c, y2c = min(w, x2), min(h, y2)
-        if x2c <= x1c or y2c <= y1c:
-            continue
-
-        crop = image[y1c:y2c, x1c:x2c]
-        if crop.size == 0:
-            continue
-
-        result = model(crop, conf=0.05, imgsz=320, iou=0.5)[0]
-        label = None
-        if result.boxes is not None and len(result.boxes) > 0:
-            confs = result.boxes.conf.tolist()
-            cls_ids = result.boxes.cls.tolist()
-            best_idx = max(range(len(confs)), key=lambda i: float(confs[i]))
-            pred_label = _label_from_names(model.names, int(cls_ids[best_idx]))
-            if pred_label in allowed_labels:
-                label = pred_label
-
-        if label is not None:
-            counts[label] += 1
-        cv2.rectangle(image, (x1c, y1c), (x2c, y2c), (0, 255, 0), 2)
-        cv2.putText(
-            image,
-            label or "Unknown",
-            (x1c, max(0, y1c - 10)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (0, 255, 0),
-            2,
-        )
-
-    return counts, image
-
-
 def infer_with_fallback(
     model: YOLO,
     image_path: str,
@@ -204,32 +134,50 @@ def index():
         file.save(upload_path)
         inference_input_path = upload_path
 
+        model = get_model(weights)
         conf = float(request.form.get("conf", 0.25))
-        generic_model = get_model(GENERIC_MODEL_ID)
-        bottle_boxes, generic_inference, used_conf = detect_bottle_boxes(
-            generic_model, str(inference_input_path), conf
+        # Generic COCO model often benefits from a larger inference size on bottle shelves.
+        imgsz = 960 if using_generic else 640
+        min_conf = 0.05 if using_generic else 0.01
+        iou = 0.45 if using_generic else 0.5
+        inference, used_conf = infer_with_fallback(
+            model,
+            str(inference_input_path),
+            conf,
+            imgsz=imgsz,
+            iou=iou,
+            min_conf=min_conf,
         )
 
+        names = model.names
         fallback_used = False
         if using_generic:
-            counts = Counter()
-            annotated = generic_inference.plot()
+            counts = count_beverage_like_from_generic(inference, names)
         else:
-            trained_model = get_model(weights)
-            counts, annotated = classify_bottles_with_trained_model(
-                str(inference_input_path), bottle_boxes, trained_model
-            )
-            if sum(counts.values()) == 0:
-                counts = Counter()
-                annotated = generic_inference.plot()
-                fallback_used = True
+            class_ids = inference.boxes.cls.tolist() if inference.boxes is not None else []
+            counts = Counter(names[int(cls_id)] for cls_id in class_ids)
 
-        if annotated is not None:
-            cv2.imwrite(str(output_path), annotated)
-        else:
-            raw_image = cv2.imread(str(inference_input_path))
-            if raw_image is not None:
-                cv2.imwrite(str(output_path), raw_image)
+            # If trained model misses everything, fallback to generic bottle counting.
+            if sum(counts.values()) == 0:
+                generic_model = get_model(GENERIC_MODEL_ID)
+                generic_inference, _ = infer_with_fallback(
+                    generic_model,
+                    str(inference_input_path),
+                    conf,
+                    imgsz=960,
+                    iou=0.45,
+                    min_conf=0.05,
+                )
+                generic_counts = count_beverage_like_from_generic(
+                    generic_inference, generic_model.names
+                )
+                if sum(generic_counts.values()) > 0:
+                    counts = generic_counts
+                    inference = generic_inference
+                    fallback_used = True
+
+        annotated = inference.plot()
+        cv2.imwrite(str(output_path), annotated)
 
         result = {
             "counts": dict(sorted(counts.items())),
@@ -241,7 +189,7 @@ def index():
             "mode": "generic" if using_generic else "trained",
             "fallback_used": fallback_used,
             "weights": weights,
-            "classes": ["CocaCola", "Sprite"],
+            "classes": list(names.values()) if isinstance(names, dict) else list(names),
         }
 
     return render_template("index.html", error=error, result=result)
