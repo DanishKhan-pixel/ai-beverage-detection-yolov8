@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beverage Detection and Counting</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 980px;
+      margin: 24px auto;
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+    h1 { margin-top: 0; }
+    form {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+    }
+    img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Beverage Object Recognition and Counting</h1>
+    <p>Upload a shelf/fridge image to detect beverages and get counts.</p>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+      <div>
+        <label for="image">Image</label><br />
+        <input id="image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp" required />
+      </div>
+      <div>
+        <label for="conf">Confidence</label><br />
+        <input id="conf" name="conf" type="number" min="0.05" max="0.95" step="0.05" value="0.25" />
+      </div>
+      <button type="submit">Run Detection</button>
+    </form>
+
+    {% if result %}
+      <div class="card">
+        <strong>Total detected beverages:</strong> {{ result.total }}<br />
+        <strong>Confidence threshold:</strong> {{ result.conf }}
+        <ul>
+          {% for label, count in result.counts.items() %}
+            <li>{{ label }}: {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Input Image</h3>
+          <img src="{{ result.input_image }}" alt="Input image" />
+        </div>
+        <div class="card">
+          <h3>Annotated Output</h3>
+          <img src="{{ result.output_image }}" alt="Detection output image" />
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
