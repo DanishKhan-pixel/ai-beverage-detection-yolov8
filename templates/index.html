@@ -112,8 +112,11 @@
         <strong>Total detected beverages:</strong> {{ result.total }}<br />
         <strong>Requested confidence:</strong> {{ result.conf }}<br />
         <strong>Used confidence:</strong> {{ result.used_conf }}
+        {% if result.autocropped %}
+          <br /><strong>Auto-fix:</strong> Detected side-by-side duplicate screenshot, used one half for counting.
+        {% endif %}
         {% if result.fallback_used %}
-          <br /><strong>Fallback:</strong> Used generic detector and mapped beverage-like objects to <code>Other</code>.
+          <br /><strong>Fallback:</strong> Used generic detector and mapped beverage-like objects to readable labels (<code>Bottle</code>, <code>Cup</code>, <code>Glass Bottle</code>).
         {% endif %}
         <ul>
           {% for label, count in result.counts.items() %}

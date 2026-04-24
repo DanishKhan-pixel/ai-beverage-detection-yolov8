@@ -4,6 +4,16 @@ from pathlib import Path
 import cv2
 from ultralytics import YOLO
 
+TARGET_BEVERAGE_CLASSES = ("CocaCola", "Sprite", "Water")
+
+
+def get_allowed_class_ids(model_names: dict | list, target_labels: tuple[str, ...]) -> list[int]:
+    if isinstance(model_names, dict):
+        items = model_names.items()
+    else:
+        items = enumerate(model_names)
+    return [int(cls_id) for cls_id, label in items if str(label) in target_labels]
+
 
 def resolve_model_path(model_path: str | None = None) -> Path:
     if model_path:
@@ -37,12 +47,18 @@ def predict_and_count(
     output_path: str = "runs/predict/output.jpg",
 ) -> dict:
     model = YOLO(str(resolve_model_path(model_path)))
+    allowed_class_ids = get_allowed_class_ids(model.names, TARGET_BEVERAGE_CLASSES)
+    if not allowed_class_ids:
+        raise ValueError(
+            "Loaded model does not contain target classes: "
+            + ", ".join(TARGET_BEVERAGE_CLASSES)
+        )
     thresholds = [conf, 0.1, 0.05, 0.01]
-    result = model(image_path, conf=conf)[0]
+    result = model(image_path, conf=conf, classes=allowed_class_ids)[0]
     used_conf = conf
     if result.boxes is None or len(result.boxes) == 0:
         for threshold in thresholds[1:]:
-            result = model(image_path, conf=threshold)[0]
+            result = model(image_path, conf=threshold, classes=allowed_class_ids)[0]
             used_conf = threshold
             if result.boxes is not None and len(result.boxes) > 0:
                 break

@@ -125,6 +125,23 @@ Class mapping is in `data.yaml`:
 python train.py
 ```
 
+You can also pass custom settings:
+
+```bash
+python train.py --data dataset/data.yaml --epochs 120 --imgsz 640 --batch 8
+```
+
+### Add more training data (recommended)
+
+- Add more labeled shelf/fridge images to `dataset/train` and `dataset/valid` (same YOLO label format).
+- Keep class names consistent with your `data.yaml` classes.
+- If using Roboflow, create a new dataset version with more images and train with that higher `--version`.
+- Retrain after adding data:
+
+```bash
+python train.py --data dataset/data.yaml --epochs 120
+```
+
 Best model is saved at:
 
 `runs/beverage_detect/weights/best.pt`

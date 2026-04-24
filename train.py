@@ -1,7 +1,14 @@
+import argparse
 from pathlib import Path
 
 import yaml
 from ultralytics import YOLO
+
+COMMON_DATA_YAML_PATHS = (
+    Path("dataset/data.yaml"),
+    Path("beverage_dataset/data.yaml"),
+    Path("data.yaml"),
+)
 
 
 def _count_images(path: Path) -> int:
@@ -45,19 +52,70 @@ def validate_dataset(data_yaml_path: Path) -> None:
         )
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train YOLOv8 beverage detector.")
+    parser.add_argument(
+        "--data",
+        type=str,
+        default=None,
+        help="Path to data.yaml (auto-detects common paths when omitted).",
+    )
+    parser.add_argument("--epochs", type=int, default=100, help="Training epochs.")
+    parser.add_argument("--imgsz", type=int, default=640, help="Image size.")
+    parser.add_argument("--batch", type=int, default=8, help="Batch size.")
+    return parser.parse_args()
+
+
+def _first_existing_data_yaml(paths: tuple[Path, ...]) -> Path | None:
+    for candidate in paths:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def resolve_data_yaml(user_path: str | None) -> Path:
+    if user_path:
+        data_yaml = Path(user_path)
+        if data_yaml.exists():
+            return data_yaml
+
+        # If user passed a stale path (e.g., dataset/data.yaml), try common local locations.
+        fallback = _first_existing_data_yaml(COMMON_DATA_YAML_PATHS)
+        if fallback:
+            print(
+                f"Warning: provided data path not found ({data_yaml}). "
+                f"Using detected config: {fallback}"
+            )
+            return fallback
+        raise FileNotFoundError(f"Provided data.yaml not found: {data_yaml}")
+
+    discovered = _first_existing_data_yaml(COMMON_DATA_YAML_PATHS)
+    if discovered:
+        return discovered
+
+    raise FileNotFoundError(
+        "No data.yaml found. Expected one of: dataset/data.yaml, beverage_dataset/data.yaml, or data.yaml."
+    )
+
+
 def main() -> None:
-    data_yaml = Path("beverage_dataset/data.yaml")
-    if not data_yaml.exists():
-        raise FileNotFoundError("`beverage_dataset/data.yaml` not found.")
+    args = parse_args()
+    data_yaml = resolve_data_yaml(args.data)
     validate_dataset(data_yaml)
 
     model = YOLO("yolov8n.pt")
 
     model.train(
         data=str(data_yaml),
-        epochs=50,
-        imgsz=640,
-        batch=8,
+        epochs=args.epochs,
+        imgsz=args.imgsz,
+        batch=args.batch,
+        # Mild augmentation helps when adding varied shelf/fridge photos.
+        mosaic=1.0,
+        mixup=0.1,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
         project="runs/detect",
         name="beverage_detect",
     )
