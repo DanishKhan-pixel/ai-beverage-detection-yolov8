@@ -1,0 +1,10 @@
+path: beverage_dataset
+
+train: train/images
+val: valid/images
+
+names:
+  0: CocaCola
+  1: Sprite
+  2: Water
+  3: Juice

@@ -68,6 +68,18 @@
       margin: 8px 0 0;
       padding-left: 18px;
     }
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 10px;
+    }
+    .checkbox-wrap input {
+      margin: 0;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+    }
   </style>
 </head>
 <body>
@@ -88,18 +100,37 @@
         <label for="conf">Confidence</label><br />
         <input id="conf" name="conf" type="number" min="0.05" max="0.95" step="0.05" value="0.25" />
       </div>
+      <div class="checkbox-wrap">
+        <input id="debug_mode" name="debug_mode" type="checkbox" />
+        <label for="debug_mode">Debug mode (show raw confidences)</label>
+      </div>
       <button type="submit">Run Detection</button>
     </form>
 
     {% if result %}
       <div class="card">
         <strong>Total detected beverages:</strong> {{ result.total }}<br />
-        <strong>Confidence threshold:</strong> {{ result.conf }}
+        <strong>Requested confidence:</strong> {{ result.conf }}<br />
+        <strong>Used confidence:</strong> {{ result.used_conf }}
+        {% if result.fallback_used %}
+          <br /><strong>Fallback:</strong> Used generic detector and mapped beverage-like objects to <code>Other</code>.
+        {% endif %}
         <ul>
           {% for label, count in result.counts.items() %}
             <li>{{ label }}: {{ count }}</li>
           {% endfor %}
         </ul>
+        {% if result.debug_mode %}
+          <p><strong>Raw detections:</strong></p>
+          <ul>
+            {% for detection in result.debug_detections %}
+              <li>{{ detection.label }} (confidence: {{ detection.confidence }}, source: {{ detection.source }})</li>
+            {% endfor %}
+            {% if not result.debug_detections %}
+              <li>No detections found by custom or fallback models.</li>
+            {% endif %}
+          </ul>
+        {% endif %}
       </div>
 
       <div class="grid">
