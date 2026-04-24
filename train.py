@@ -5,6 +5,7 @@ import yaml
 from ultralytics import YOLO
 
 COMMON_DATA_YAML_PATHS = (
+    Path("Beverage/data.yaml"),
     Path("dataset/data.yaml"),
     Path("beverage_dataset/data.yaml"),
     Path("data.yaml"),
@@ -94,7 +95,7 @@ def resolve_data_yaml(user_path: str | None) -> Path:
         return discovered
 
     raise FileNotFoundError(
-        "No data.yaml found. Expected one of: dataset/data.yaml, beverage_dataset/data.yaml, or data.yaml."
+        "No data.yaml found. Expected one of: Beverage/data.yaml, dataset/data.yaml, beverage_dataset/data.yaml, or data.yaml."
     )
 
 

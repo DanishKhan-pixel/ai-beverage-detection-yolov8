@@ -10,28 +10,25 @@ from ultralytics import YOLO
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 UPLOAD_DIR = Path("static/uploads")
 OUTPUT_DIR = Path("static/outputs")
-DEFAULT_MODEL_PATH = Path("runs/beverage_detect/weights/best.pt")
-TARGET_BEVERAGE_CLASSES = ("CocaCola", "Sprite", "Water")
+DEFAULT_MODEL_PATH = Path("runs/detect/beverage_detect/weights/best.pt")
+GENERIC_MODEL_ID = "yolov8n.pt"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 
-# Lazy-loaded model cache to avoid reloading weights every request.
 _model_cache: Optional[YOLO] = None
-_generic_model_cache: Optional[YOLO] = None
+_model_cache_key: Optional[str] = None
 
 
 def resolve_model_path() -> Optional[Path]:
-    # Try known locations first, then fallback to any best.pt in runs.
     candidates = [
         DEFAULT_MODEL_PATH,
-        Path("runs/detect/beverage_detect/weights/best.pt"),
-        Path("runs/detect/runs/beverage_detect/weights/best.pt"),
+        Path("runs/beverage_detect/weights/best.pt"),
+        Path("runs/detect/runs/detect/beverage_detect/weights/best.pt"),
     ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
-
     discovered = sorted(Path("runs").glob("**/weights/best.pt"))
     return discovered[-1] if discovered else None
 
@@ -40,132 +37,133 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def get_model(model_path: Path) -> YOLO:
-    global _model_cache
-    if _model_cache is None:
-        _model_cache = YOLO(str(model_path))
+def get_model(weights: str) -> YOLO:
+    global _model_cache, _model_cache_key
+    if _model_cache is None or _model_cache_key != weights:
+        _model_cache = YOLO(weights)
+        _model_cache_key = weights
     return _model_cache
 
 
-def get_generic_model() -> YOLO:
-    global _generic_model_cache
-    if _generic_model_cache is None:
-        _generic_model_cache = YOLO("yolov8n.pt")
-    return _generic_model_cache
+def count_beverage_like_from_generic(result, names: dict | list) -> Counter:
+    """
+    When using a COCO-pretrained model, we can't classify brands.
+    We approximate beverage counting by counting beverage-like classes.
+    """
+    beverage_like = {"bottle", "cup", "wine glass"}
+    counts: Counter = Counter()
+    if result.boxes is None or len(result.boxes) == 0:
+        return counts
+    class_ids = result.boxes.cls.tolist()
+    for cls_id in class_ids:
+        label = names[int(cls_id)] if isinstance(names, dict) else names[int(cls_id)]
+        if label in beverage_like:
+            # Count generic categories when no brand model is available.
+            if label == "bottle":
+                counts["Bottle"] += 1
+            elif label == "cup":
+                counts["Cup"] += 1
+            else:
+                counts["Glass"] += 1
+    return counts
 
 
-def get_allowed_class_ids(model_names: dict | list, target_labels: tuple[str, ...]) -> list[int]:
-    if isinstance(model_names, dict):
-        items = model_names.items()
-    else:
-        items = enumerate(model_names)
-    return [int(cls_id) for cls_id, label in items if str(label) in target_labels]
+def _label_from_names(names: dict | list, cls_id: int) -> str:
+    return names[int(cls_id)] if isinstance(names, dict) else names[int(cls_id)]
+
+
+def detect_bottle_boxes(generic_model: YOLO, image_path: str, conf: float):
+    result, used_conf = infer_with_fallback(
+        generic_model,
+        image_path,
+        conf,
+        imgsz=960,
+        iou=0.45,
+        min_conf=0.05,
+    )
+    boxes = []
+    if result.boxes is None or len(result.boxes) == 0:
+        return boxes, result, used_conf
+
+    for cls_id, xyxy in zip(result.boxes.cls.tolist(), result.boxes.xyxy.tolist()):
+        label = _label_from_names(generic_model.names, int(cls_id))
+        if label == "bottle":
+            x1, y1, x2, y2 = [int(v) for v in xyxy]
+            boxes.append((x1, y1, x2, y2))
+    return boxes, result, used_conf
+
+
+def classify_bottles_with_trained_model(image_path: str, bottle_boxes: list[tuple[int, int, int, int]], model: YOLO):
+    image = cv2.imread(image_path)
+    if image is None:
+        return Counter(), None
+
+    allowed_labels = {"CocaCola", "Sprite"}
+    counts: Counter = Counter()
+
+    for x1, y1, x2, y2 in bottle_boxes:
+        h, w = image.shape[:2]
+        x1c, y1c = max(0, x1), max(0, y1)
+        x2c, y2c = min(w, x2), min(h, y2)
+        if x2c <= x1c or y2c <= y1c:
+            continue
+
+        crop = image[y1c:y2c, x1c:x2c]
+        if crop.size == 0:
+            continue
+
+        result = model(crop, conf=0.05, imgsz=320, iou=0.5)[0]
+        label = None
+        if result.boxes is not None and len(result.boxes) > 0:
+            confs = result.boxes.conf.tolist()
+            cls_ids = result.boxes.cls.tolist()
+            best_idx = max(range(len(confs)), key=lambda i: float(confs[i]))
+            pred_label = _label_from_names(model.names, int(cls_ids[best_idx]))
+            if pred_label in allowed_labels:
+                label = pred_label
+
+        if label is not None:
+            counts[label] += 1
+        cv2.rectangle(image, (x1c, y1c), (x2c, y2c), (0, 255, 0), 2)
+        cv2.putText(
+            image,
+            label or "Unknown",
+            (x1c, max(0, y1c - 10)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 255, 0),
+            2,
+        )
+
+    return counts, image
 
 
 def infer_with_fallback(
-    model: YOLO, image_path: str, conf: float, allowed_class_ids: list[int] | None = None
+    model: YOLO,
+    image_path: str,
+    conf: float,
+    *,
+    imgsz: int = 640,
+    iou: float = 0.5,
+    min_conf: float = 0.01,
 ):
+    # Avoid extremely low confidence that can create many noisy boxes.
     thresholds = [conf, 0.1, 0.05, 0.01]
+    thresholds = [t for t in thresholds if t >= min_conf]
+    if conf not in thresholds:
+        thresholds.insert(0, conf)
     used = conf
-    inference = model(image_path, conf=conf, classes=allowed_class_ids or None)[0]
-    count = 0 if inference.boxes is None else len(inference.boxes)
-    if count > 0:
-        return inference, used
+    result = model(image_path, conf=conf, imgsz=imgsz, iou=iou)[0]
+    if result.boxes is not None and len(result.boxes) > 0:
+        return result, used
 
     for threshold in thresholds[1:]:
-        inference = model(image_path, conf=threshold, classes=allowed_class_ids or None)[0]
-        count = 0 if inference.boxes is None else len(inference.boxes)
+        result = model(image_path, conf=threshold, imgsz=imgsz, iou=iou)[0]
         used = threshold
-        if count > 0:
+        if result.boxes is not None and len(result.boxes) > 0:
             break
 
-    return inference, used
-
-
-def is_unreliable_custom_result(inference, used_conf: float) -> bool:
-    if inference.boxes is None or len(inference.boxes) == 0:
-        return True
-
-    confs = [float(score) for score in inference.boxes.conf.tolist()]
-    max_conf = max(confs) if confs else 0.0
-    detection_count = len(confs)
-
-    # Extremely low-confidence detections at the minimum threshold are often noise.
-    if used_conf <= 0.01 and max_conf < 0.05 and detection_count <= 2:
-        return True
-
-    # A single giant box covering much of the image is usually a bad custom prediction.
-    if detection_count == 1:
-        box = inference.boxes.xyxy[0].tolist()
-        x1, y1, x2, y2 = [float(v) for v in box]
-        h, w = inference.orig_shape
-        image_area = float(w * h) if (w > 0 and h > 0) else 1.0
-        box_area = max(0.0, (x2 - x1)) * max(0.0, (y2 - y1))
-        if box_area / image_area >= 0.35:
-            return True
-
-    return False
-
-
-def coco_fallback_counts(image_path: str) -> tuple[dict, list, object]:
-    generic_model = get_generic_model()
-    inference = generic_model(image_path, conf=0.1)[0]
-    names = generic_model.names
-    class_ids = inference.boxes.cls.tolist() if inference.boxes is not None else []
-    confs = inference.boxes.conf.tolist() if inference.boxes is not None else []
-
-    beverage_like = {"bottle", "cup", "wine glass"}
-    mapped_labels = {
-        "bottle": "Bottle",
-        "cup": "Cup",
-        "wine glass": "Glass Bottle",
-    }
-    counts = Counter()
-    debug_rows = []
-    for cls_id, score in zip(class_ids, confs):
-        label = names[int(cls_id)]
-        if label in beverage_like:
-            readable_label = mapped_labels[label]
-            counts[readable_label] += 1
-            debug_rows.append(
-                {
-                    "label": readable_label,
-                    "confidence": round(float(score), 4),
-                    "source": f"generic ({label})",
-                }
-            )
-
-    return dict(counts), debug_rows, inference
-
-
-def maybe_autocrop_split_screenshot(image_path: Path) -> tuple[Path, bool]:
-    image = cv2.imread(str(image_path))
-    if image is None:
-        return image_path, False
-
-    h, w = image.shape[:2]
-    if w < 700:
-        return image_path, False
-
-    # Only consider very wide images as potential side-by-side screenshots.
-    aspect_ratio = w / float(h)
-    if aspect_ratio < 1.7:
-        return image_path, False
-
-    half = w // 2
-    left = image[:, :half]
-    right = image[:, w - half :]
-    if left.shape != right.shape:
-        return image_path, False
-
-    # Side-by-side duplicate screenshots are usually near-identical halves.
-    similarity = 1.0 - (cv2.absdiff(left, right).mean() / 255.0)
-    if similarity < 0.93:
-        return image_path, False
-
-    cropped_path = image_path.with_name(f"{image_path.stem}_autocrop{image_path.suffix}")
-    cv2.imwrite(str(cropped_path), left)
-    return cropped_path, True
+    return result, used
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -188,12 +186,12 @@ def index():
             return render_template("index.html", error=error, result=result)
 
         model_path = resolve_model_path()
-        if model_path is None:
-            error = (
-                "Model weights not found. Train first using: "
-                "`python train.py` (or `python train_roboflow.py ...`) and ensure best.pt exists in runs."
-            )
-            return render_template("index.html", error=error, result=result)
+        using_generic = model_path is None
+        weights = str(model_path) if model_path else GENERIC_MODEL_ID
+        if using_generic:
+            print("[app] Using generic COCO model (no training): yolov8n.pt")
+        else:
+            print(f"[app] Using trained weights: {model_path}")
 
         suffix = file.filename.rsplit(".", 1)[1].lower()
         image_id = uuid4().hex
@@ -204,50 +202,34 @@ def index():
         upload_path = UPLOAD_DIR / f"{image_id}.{suffix}"
         output_path = OUTPUT_DIR / f"{image_id}.jpg"
         file.save(upload_path)
-        inference_input_path, autocropped = maybe_autocrop_split_screenshot(upload_path)
+        inference_input_path = upload_path
 
-        model = get_model(model_path)
         conf = float(request.form.get("conf", 0.25))
-        debug_mode = request.form.get("debug_mode") == "on"
-        allowed_class_ids = get_allowed_class_ids(model.names, TARGET_BEVERAGE_CLASSES)
-        if not allowed_class_ids:
-            error = (
-                "Loaded model does not contain target classes "
-                f"{', '.join(TARGET_BEVERAGE_CLASSES)}. Please retrain with the correct labels."
-            )
-            return render_template("index.html", error=error, result=result)
-        inference, used_conf = infer_with_fallback(
-            model, str(inference_input_path), conf, allowed_class_ids=allowed_class_ids
+        generic_model = get_model(GENERIC_MODEL_ID)
+        bottle_boxes, generic_inference, used_conf = detect_bottle_boxes(
+            generic_model, str(inference_input_path), conf
         )
 
-        names = model.names
-        class_ids = inference.boxes.cls.tolist() if inference.boxes is not None else []
-        counts = Counter(names[int(cls_id)] for cls_id in class_ids)
-        debug_detections = []
-        if debug_mode and inference.boxes is not None:
-            for cls_id, score in zip(inference.boxes.cls.tolist(), inference.boxes.conf.tolist()):
-                debug_detections.append(
-                    {
-                        "label": names[int(cls_id)],
-                        "confidence": round(float(score), 4),
-                        "source": "custom",
-                    }
-                )
-
         fallback_used = False
-        if sum(counts.values()) == 0 or is_unreliable_custom_result(inference, used_conf):
-            fallback_counts, fallback_debug, fallback_inference = coco_fallback_counts(
-                str(inference_input_path)
+        if using_generic:
+            counts = Counter()
+            annotated = generic_inference.plot()
+        else:
+            trained_model = get_model(weights)
+            counts, annotated = classify_bottles_with_trained_model(
+                str(inference_input_path), bottle_boxes, trained_model
             )
-            if fallback_counts:
-                counts = Counter(fallback_counts)
+            if sum(counts.values()) == 0:
+                counts = Counter()
+                annotated = generic_inference.plot()
                 fallback_used = True
-                inference = fallback_inference
-                if debug_mode:
-                    debug_detections.extend(fallback_debug)
 
-        annotated = inference.plot()
-        cv2.imwrite(str(output_path), annotated)
+        if annotated is not None:
+            cv2.imwrite(str(output_path), annotated)
+        else:
+            raw_image = cv2.imread(str(inference_input_path))
+            if raw_image is not None:
+                cv2.imwrite(str(output_path), raw_image)
 
         result = {
             "counts": dict(sorted(counts.items())),
@@ -256,10 +238,10 @@ def index():
             "output_image": url_for("static", filename=f"outputs/{output_path.name}"),
             "conf": conf,
             "used_conf": used_conf,
-            "debug_mode": debug_mode,
-            "debug_detections": debug_detections,
+            "mode": "generic" if using_generic else "trained",
             "fallback_used": fallback_used,
-            "autocropped": autocropped,
+            "weights": weights,
+            "classes": ["CocaCola", "Sprite"],
         }
 
     return render_template("index.html", error=error, result=result)
