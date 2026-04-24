@@ -3,3 +3,5 @@ flask
 opencv-python
 matplotlib
 pyyaml
+roboflow
+requests

@@ -46,6 +46,60 @@ pip install -r requirements.txt
 
 ## 2) Prepare dataset
 
+### Option A: Roboflow (already labeled, recommended)
+
+Download in **YOLOv8** format and train directly:
+
+```bash
+export ROBOFLOW_API_KEY="your_api_key"
+python train_roboflow.py \
+  --workspace "your-workspace-id" \
+  --project "your-project-id" \
+  --version 1
+```
+
+Optional training overrides:
+
+```bash
+python train_roboflow.py \
+  --workspace "your-workspace-id" \
+  --project "your-project-id" \
+  --version 1 \
+  --epochs 80 \
+  --imgsz 640 \
+  --batch 8
+```
+
+This script:
+- Downloads dataset from Roboflow in YOLOv8 format
+- Uses the downloaded `data.yaml`
+- Starts training immediately
+
+### Hindi quick steps (Roboflow se download karo aur add karo)
+
+1. Roboflow project open karo -> **Export** -> format **YOLOv8** select karo.
+2. Download URL copy karo (jo zip download link hota hai).
+3. Niche command chalao:
+
+```bash
+python download_roboflow_dataset.py --url "PASTE_ROBOFLOW_YOLOV8_URL_HERE"
+```
+
+4. Dataset auto `dataset/` folder me add ho jayega.
+5. Training start karo:
+
+```bash
+python train.py
+```
+
+Note: Agar pehle empty cache bani ho to remove karo:
+
+```bash
+rm -f dataset/train/labels.cache dataset/valid/labels.cache
+```
+
+### Option B: Local dataset folders
+
 Use YOLO format labels (`class x_center y_center width height`, normalized).
 
 Place files like this:
@@ -65,7 +119,7 @@ Class mapping is in `data.yaml`:
 4. Juice
 5. Other
 
-## 3) Train model
+## 3) Train model (local folder option)
 
 ```bash
 python train.py
