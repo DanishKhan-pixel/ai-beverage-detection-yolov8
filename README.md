@@ -1,42 +1,27 @@
-# Beverage Object Recognition and Counting (Flask + YOLOv8)
+# Beverage recognition
 
-This project detects and counts beverages (e.g., CocaCola, Sprite, Water, Juice, Other) from fridge/shelf images.
-It uses **Ultralytics YOLOv8** for object detection and a **Flask web app** for easy inference demos.
+This repo is a small project that looks at a fridge or shelf photo and tries to **spot drinks**, draw boxes around them, and **count** how many of each type it thinks it sees (for example CocaCola, Sprite, and so on). Nothing fancy on the website side — you upload a picture and it shows you the result.
 
-## Why this architecture
+---
 
-- **YOLOv8**: strong baseline for object detection, easy fine-tuning, fast inference.
-- **Transfer learning**: starting from `yolov8n.pt` reduces training time and improves results with smaller datasets.
-- **Flask app**: simple interface to upload an image, visualize bounding boxes, and show class counts.
+## How it actually works (in normal words)
 
-## Project structure
+1. You collect photos and **label** them (each bottle gets a box and a category). That is your training data.
+2. You run **`train.py`**. It uses **YOLOv8** (Ultralytics), which is a common “find objects in an image” model. Training does not start from zero: it begins from **`yolov8n.pt`**, which was already trained on a big public dataset, then **adjusts** the weights on your beverage pictures. That usually works better with less data than training from scratch.
+3. Training saves a file called **`best.pt`** under something like `runs/detect/beverage_detect/weights/`.
+4. **`app.py`** is a tiny **Flask** website. You open it in the browser, upload an image, and the app loads `best.pt`, runs the model, saves a copy of the image with boxes drawn on it (**OpenCV** helps write that file), and shows you counts.
+5. If you do not have a trained `best.pt` yet, the app can still run using the generic **`yolov8n.pt`** model. That one was not trained on your brands, so you only get rough categories like bottle / cup / glass — good enough to see the pipeline working, not good enough for real brand accuracy.
 
-```
-beverage-recognition/
-├── app.py
-├── train.py
-├── predict.py
-├── data.yaml
-├── requirements.txt
-├── README.md
-├── dataset/
-│   ├── train/
-│   │   ├── images/
-│   │   └── labels/
-│   ├── valid/
-│   │   ├── images/
-│   │   └── labels/
-│   └── test/
-│       ├── images/
-│       └── labels/
-├── templates/
-│   └── index.html
-└── static/
-    ├── uploads/
-    └── outputs/
-```
+So in short: **labels + train → weights file → upload image → boxes + numbers on the screen.**
 
-## 1) Setup
+---
+
+## What you need installed
+
+- Python 3  
+- Packages from **`requirements.txt`**: ultralytics (YOLO), flask, opencv-python, pyyaml  
+
+Install:
 
 ```bash
 python3 -m venv venv
@@ -44,165 +29,68 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 2) Prepare dataset
+On Windows, use `venv\Scripts\activate` instead of `source venv/bin/activate`.
 
-### Option A: Roboflow (already labeled, recommended)
+---
 
-Download in **YOLOv8** format and train directly:
+## Where things live in this folder
 
-```bash
-export ROBOFLOW_API_KEY="your_api_key"
-python train_roboflow.py \
-  --workspace "your-workspace-id" \
-  --project "your-project-id" \
-  --version 1
-```
+- **`app.py`** — web UI (upload, counts, saved output image).  
+- **`train.py`** — training; it tries to find a `data.yaml` in a few usual places (`Beverage/`, `dataset/`, `beverage_dataset/`, or the root `data.yaml`).  
+- **`predict.py`** — same idea as the app but from the terminal for one image.  
+- **`data.yaml`** — tells training where your train/val images are and what the class names are.  
+- **`templates/index.html`** — the HTML for the Flask page.  
+- **`static/uploads/`** and **`static/outputs/`** — filled when you use the web app.
 
-Optional training overrides:
+Your real dataset is usually **not** all inside this readme; it sits in folders pointed to by `data.yaml` (often `dataset/` or similar).
 
-```bash
-python train_roboflow.py \
-  --workspace "your-workspace-id" \
-  --project "your-project-id" \
-  --version 1 \
-  --epochs 80 \
-  --imgsz 640 \
-  --batch 8
-```
+---
 
-This script:
-- Downloads dataset from Roboflow in YOLOv8 format
-- Uses the downloaded `data.yaml`
-- Starts training immediately
+## Dataset (YOLO style, very short)
 
-### Hindi quick steps (Roboflow se download karo aur add karo)
+Put images in `train/images` and `valid/images`. For each image, you need a matching `.txt` in `train/labels` and `valid/labels` with the same base name.
 
-1. Roboflow project open karo -> **Export** -> format **YOLOv8** select karo.
-2. Download URL copy karo (jo zip download link hota hai).
-3. Niche command chalao:
 
-```bash
-python download_roboflow_dataset.py --url "PASTE_ROBOFLOW_YOLOV8_URL_HERE"
-```
 
-4. Dataset auto `dataset/` folder me add ho jayega.
-5. Training start karo:
+All five numbers are normalized between 0 and 1 (that is just how YOLO wants it).
+
+Example classes from the sample **`data.yaml`** in this repo:
+
+- 0 — CocaCola  
+- 1 — Sprite  
+- 2 — Water  
+- 3 — Juice  
+- 4 — Other  
+
+## Train the model
 
 ```bash
 python train.py
 ```
 
-Note: Agar pehle empty cache bani ho to remove karo:
 
-```bash
-rm -f dataset/train/labels.cache dataset/valid/labels.cache
-```
 
-### Option B: Local dataset folders
+---
 
-Use YOLO format labels (`class x_center y_center width height`, normalized).
+## Run from the command line
 
-Place files like this:
-
-- `dataset/train/images/*.jpg`
-- `dataset/train/labels/*.txt`
-- `dataset/valid/images/*.jpg`
-- `dataset/valid/labels/*.txt`
-- `dataset/test/images/*.jpg`
-- `dataset/test/labels/*.txt`
-
-Class mapping is in `data.yaml`:
-
-1. CocaCola
-2. Sprite
-3. Water
-4. Juice
-5. Other
-
-## 3) Train model (local folder option)
-
-```bash
-python train.py
-```
-
-You can also pass custom settings:
-
-```bash
-python train.py --data dataset/data.yaml --epochs 120 --imgsz 640 --batch 8
-```
-
-### Add more training data (recommended)
-
-- Add more labeled shelf/fridge images to `dataset/train` and `dataset/valid` (same YOLO label format).
-- Keep class names consistent with your `data.yaml` classes.
-- If using Roboflow, create a new dataset version with more images and train with that higher `--version`.
-- Retrain after adding data:
-
-```bash
-python train.py --data dataset/data.yaml --epochs 120
-```
-
-Best model is saved at:
-
-`runs/beverage_detect/weights/best.pt`
-
-Training/eval artifacts include:
-
-- `runs/beverage_detect/results.png`
-- mAP, precision, recall logs in the run directory
-
-## 4) Run CLI inference + counting
-
-Put a test image at `sample_images/test.jpg` (or edit path in `predict.py`), then:
+After you have weights, open **`predict.py`**, set the image path inside if needed, then:
 
 ```bash
 python predict.py
 ```
 
-Output image with boxes:
+It prints counts and saves an output image (see the script for the exact output path).
 
-`runs/predict/output.jpg`
+---
 
-Console output example:
-
-```
-Beverage Count:
-CocaCola: 5
-Sprite: 3
-Water: 4
-Other: 2
-```
-
-## 5) Run Flask web app
+## Run the website
 
 ```bash
 python app.py
 ```
 
-Open:
+Then open **http://127.0.0.1:5000** in your browser, upload a jpg/png/webp, and you should see the annotated image plus the counts.
 
-`http://127.0.0.1:5000`
-
-Upload an unseen fridge/shelf image and get:
-
-- Annotated output image with bounding boxes/labels
-- Count summary per beverage class
-
-## Evaluation guidance for submission
-
-Include in your report/demo:
-
-- Dataset source and size (train/val/test split)
-- Why YOLOv8 was chosen
-- Training settings (epochs, batch size, image size)
-- Metrics (mAP, precision, recall)
-- At least one unseen demo image with counts
-
-## Deliverables checklist
-
-- [ ] GitHub repo with all code
-- [ ] README with run steps
-- [ ] Architecture + technology explanation
-- [ ] Demo video
-- [ ] At least one annotated demo image + count summary
+---
 
