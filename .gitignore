@@ -3,8 +3,29 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+
+# Trained weights + training runs (regenerate with `python train.py`)
 runs/
+*.pt
+
+# Uploaded / generated images from the web app
 static/uploads/*
 static/outputs/*
 !static/uploads/.gitkeep
 !static/outputs/.gitkeep
+
+# --- Datasets ---
+# Large Roboflow / image datasets: do NOT commit (share via Drive, zip, or Roboflow link in README).
+Beverage/
+
+# If your local `beverage_dataset/` is also large, uncomment the next line so it stays out of Git.
+# beverage_dataset/
+
+# Generic local dataset folder (if you add one and it grows large)
+dataset/train/images/*
+dataset/valid/images/*
+!dataset/train/images/.gitkeep
+!dataset/valid/images/.gitkeep
+
+# YOLO caches (rebuilt during training)
+**/labels.cache

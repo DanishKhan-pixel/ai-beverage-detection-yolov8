@@ -109,9 +109,6 @@
         <strong>Requested confidence:</strong> {{ result.conf }}<br />
         <strong>Used confidence:</strong> {{ result.used_conf }}
         <br /><strong>Model mode:</strong> {{ result.mode }}
-        {% if result.fallback_used %}
-          <br /><strong>Fallback:</strong> Brand model missed detections, showing generic bottle counts.
-        {% endif %}
         <ul>
           {% for label, count in result.counts.items() %}
             <li>{{ label }}: {{ count }}</li>
