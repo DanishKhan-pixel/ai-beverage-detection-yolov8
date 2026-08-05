@@ -118,7 +118,6 @@ def main() -> None:
         name="beverage_detect",
     )
 
-    # Runs validation on the best checkpoint and prints metrics.
     model.val(data=str(data_yaml))
 
 
