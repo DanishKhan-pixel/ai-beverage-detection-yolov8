@@ -80,8 +80,6 @@ After you have weights, open **`predict.py`**, set the image path inside if need
 python predict.py
 ```
 
-It prints counts and saves an output image (see the script for the exact output path).
-
 ---
 
 ## Run the website
