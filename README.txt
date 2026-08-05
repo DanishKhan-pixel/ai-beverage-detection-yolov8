@@ -88,10 +88,6 @@ Predict (CLI)
 Edit image path inside predict.py if needed, then:
 python predict.py
 
-
-Web app
--------
-python app.py
 Browser: http://127.0.0.1:5000
 
 
