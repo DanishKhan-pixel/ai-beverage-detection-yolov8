@@ -11,11 +11,8 @@ COMMON_DATA_YAML_PATHS = (
     Path("data.yaml"),
 )
 
-
-
 def _count_images(path: Path) -> int:
     return sum(len(list(path.glob(ext))) for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"))
-
 
 def validate_dataset(data_yaml_path: Path) -> None:
     config = yaml.safe_load(data_yaml_path.read_text())
@@ -52,7 +49,6 @@ def validate_dataset(data_yaml_path: Path) -> None:
         raise FileNotFoundError(
             "Dataset label files missing. YOLO labels are required in train/val labels folders."
         )
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train YOLOv8 beverage detector.")
