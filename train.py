@@ -102,6 +102,7 @@ def main() -> None:
     validate_dataset(data_yaml)
 
     model = YOLO("yolov8n.pt")
+    print(model)
 
     model.train(
         data=str(data_yaml),
