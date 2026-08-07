@@ -28,6 +28,7 @@ def resolve_model_path() -> Optional[Path]:
         Path("runs/beverage_detect/weights/best.pt"),
         Path("runs/detect/runs/detect/beverage_detect/weights/best.pt"),
     ]
+    print(candidates)
     for candidate in candidates:
         if candidate.exists():
             return candidate
