@@ -120,7 +120,7 @@ def main() -> None:
     )
 
     model.val(data=str(data_yaml))
-
+# test the model
 
 if __name__ == "__main__":
     main()
