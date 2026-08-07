@@ -86,4 +86,3 @@ python predict.py
 python app.py
 ```
 
-Then open **http://127.0.0.1:5000** in your browser, upload a jpg/png/webp, and you should see the annotated image plus the counts.
