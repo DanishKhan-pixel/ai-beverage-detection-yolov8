@@ -70,6 +70,3 @@ After you have weights, open **`predict.py`**, set the image path inside if need
 
 ```bash
 python predict.py
-
-
-## Run the website
