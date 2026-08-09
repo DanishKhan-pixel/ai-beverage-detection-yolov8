@@ -2,7 +2,6 @@
 
 This repo is a small project that looks at a fridge or shelf photo and tries to **spot drinks**, draw boxes around them, and **count** how many of each type it thinks it sees (for example CocaCola, Sprite, and so on). Nothing fancy on the website side — you upload a picture and it shows you the result.
 
----
 
 ## How it actually works (in normal words)
 
