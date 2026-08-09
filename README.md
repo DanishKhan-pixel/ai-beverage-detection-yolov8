@@ -64,14 +64,6 @@ Example classes from the sample **`data.yaml`** in this repo:
 
 ## Train the model
 
-```bash
-python train.py
-```
-
-
-
----
-
 ## Run from the command line
 
 After you have weights, open **`predict.py`**, set the image path inside if needed, then:
