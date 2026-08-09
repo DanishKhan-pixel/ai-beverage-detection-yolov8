@@ -81,8 +81,3 @@ python predict.py
 
 
 ## Run the website
-
-```bash
-python app.py
-```
-
