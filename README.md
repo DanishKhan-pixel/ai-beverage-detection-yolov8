@@ -30,7 +30,6 @@ pip install -r requirements.txt
 
 On Windows, use `venv\Scripts\activate` instead of `source venv/bin/activate`.
 
----
 
 ## Where things live in this folder
 
