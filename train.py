@@ -11,6 +11,7 @@ COMMON_DATA_YAML_PATHS = (
     Path("data.yaml"),
 )
 
+
 def _count_images(path: Path) -> int:
     return sum(len(list(path.glob(ext))) for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"))
 
