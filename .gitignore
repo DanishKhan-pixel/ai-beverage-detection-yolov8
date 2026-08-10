@@ -29,3 +29,6 @@ dataset/valid/images/*
 
 # YOLO caches (rebuilt during training)
 **/labels.cache
+
+sample_images/
+sample_images/
