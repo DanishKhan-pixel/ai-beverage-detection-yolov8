@@ -15,3 +15,5 @@ roboflow:
   version: 1
   license: CC BY 4.0
   url: https://universe.roboflow.com/roboflow-universe-projects/beverage-containers-3atxb/dataset/1
+  download: https://universe.roboflow.com/roboflow-universe-projects/beverage-containers-3atxb/dataset/1/download
+  upload: https://universe.roboflow.com/roboflow-universe-projects/beverage-containers-3atxb/dataset/1/upload
