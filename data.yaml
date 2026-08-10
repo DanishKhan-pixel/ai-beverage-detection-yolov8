@@ -2,6 +2,9 @@ path: dataset
 train: train/images
 val: valid/images
 test: test/images
+train_percentage: 80
+val_percentage: 10
+test_percentage: 10
 
 names:
   0: CocaCola
