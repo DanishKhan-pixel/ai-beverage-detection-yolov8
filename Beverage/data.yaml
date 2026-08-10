@@ -2,6 +2,9 @@ path: Beverage
 train: train/images
 val: valid/images
 test: test/images
+train_percentage: 80
+val_percentage: 10
+test_percentage: 10
 
 nc: 9
 names: ['bottle-glass', 'bottle-plastic', 'cup-disposable', 'cup-handle', 'glass-mug', 'glass-normal', 'glass-wine', 'gym bottle', 'tin can']
