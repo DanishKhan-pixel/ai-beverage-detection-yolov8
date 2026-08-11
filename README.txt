@@ -40,9 +40,6 @@ requirements.txt
 
 Folders: templates/, static/uploads/, static/outputs/
 Dataset images usually in dataset/ or Beverage/ (see your data.yaml).
-
-
-
 Each label line: class_id x_center y_center width height
 Numbers are 0 to 1 (normalized).
 
