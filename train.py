@@ -96,7 +96,6 @@ def resolve_data_yaml(user_path: str | None) -> Path:
         "No data.yaml found. Expected one of: Beverage/data.yaml, dataset/data.yaml, beverage_dataset/data.yaml, or data.yaml."
     )
 
-
 def main() -> None:
     args = parse_args()
     data_yaml = resolve_data_yaml(args.data)
