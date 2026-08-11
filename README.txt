@@ -42,11 +42,6 @@ Folders: templates/, static/uploads/, static/outputs/
 Dataset images usually in dataset/ or Beverage/ (see your data.yaml).
 
 
-Dataset (YOLO)
---------------
-train/images/     validation images in valid/images/
-train/labels/     one .txt per image, same file name
-valid/labels/
 
 Each label line: class_id x_center y_center width height
 Numbers are 0 to 1 (normalized).
