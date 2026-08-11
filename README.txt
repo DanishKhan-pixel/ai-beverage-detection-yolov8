@@ -42,13 +42,6 @@ Folders: templates/, static/uploads/, static/outputs/
 Dataset images usually in dataset/ or Beverage/ (see your data.yaml).
 
 
-Setup
------
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-
 Dataset (YOLO)
 --------------
 train/images/     validation images in valid/images/
