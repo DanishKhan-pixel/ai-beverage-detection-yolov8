@@ -77,8 +77,3 @@ Edit image path inside predict.py if needed, then:
 python predict.py
 
 Browser: http://127.0.0.1:5000
-
-
-Roboflow
---------
-Export as YOLOv8, unzip, train with --data pointing to that data.yaml
