@@ -6,9 +6,3 @@ train_percentage: 80
 val_percentage: 10
 test_percentage: 10
 
-names:
-  0: CocaCola
-  1: Sprite
-  2: Water
-  3: Juice
-  4: Other
