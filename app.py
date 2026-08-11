@@ -49,10 +49,7 @@ def get_model(weights: str) -> YOLO:
 
 
 def count_beverage_like_from_generic(result, names: dict | list) -> Counter:
-    """
-    When using a COCO-pretrained model, we can't classify brands.
-    We approximate beverage counting by counting beverage-like classes.
-    """
+
     beverage_like = {"bottle", "cup", "wine glass"}
     counts: Counter = Counter()
     if result.boxes is None or len(result.boxes) == 0:
