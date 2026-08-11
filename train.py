@@ -118,7 +118,6 @@ def main() -> None:
         project="runs/detect",
         name="beverage_detect",
     )
-
     model.val(data=str(data_yaml))
 # test the model
 
