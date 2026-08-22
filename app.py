@@ -46,6 +46,7 @@ def get_model(weights: str) -> YOLO:
         _model_cache = YOLO(weights)
         _model_cache_key = weights
     return _model_cache
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
 
 
 def count_beverage_like_from_generic(result, names: dict | list) -> Counter:
