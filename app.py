@@ -69,7 +69,11 @@ def count_beverage_like_from_generic(result, names: dict | list) -> Counter:
     return counts
 
 
+
 def infer_with_fallback(
+    # python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+    # python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+    # python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
     model: YOLO,
     image_path: str,
     conf: float,
