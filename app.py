@@ -96,6 +96,10 @@ def infer_with_fallback(
         used = threshold
         if result.boxes is not None and len(result.boxes) > 0:
             break
+    if show:
+        cv2.imshow("Inference", result.plot())
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     return result, used
 
