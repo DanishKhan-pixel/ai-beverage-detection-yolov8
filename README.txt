@@ -62,5 +62,3 @@ runs/detect/beverage_detect/weights/best.pt
 
 Clear bad label cache if needed:
 rm -f dataset/train/labels.cache dataset/valid/labels.cache
-
-Browser: http://127.0.0.1:5000
