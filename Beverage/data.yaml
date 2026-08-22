@@ -11,6 +11,7 @@ names: ['bottle-glass', 'bottle-plastic', 'cup-disposable', 'cup-handle', 'glass
 
 split:
   train: 80
+  test: 10  
   val: 10
   test: 10
 roboflow:
