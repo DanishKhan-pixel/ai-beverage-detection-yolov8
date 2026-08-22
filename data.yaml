@@ -6,3 +6,4 @@ train_percentage: 80
 val_percentage: 10
 test_percentage: 10
 
+nc: 1 
