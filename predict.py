@@ -29,7 +29,9 @@ def resolve_model_path(model_path: str | None = None) -> Path:
     ]
     for candidate in candidates:
         if candidate.exists():
+            
             return candidate
+
 
     discovered = sorted(Path("runs").glob("**/weights/best.pt"))
     if discovered:
