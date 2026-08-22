@@ -71,9 +71,6 @@ def count_beverage_like_from_generic(result, names: dict | list) -> Counter:
 
 
 def infer_with_fallback(
-    # python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
-    # python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
-    # python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
     model: YOLO,
     image_path: str,
     conf: float,
@@ -81,6 +78,8 @@ def infer_with_fallback(
     imgsz: int = 640,
     iou: float = 0.5,
     min_conf: float = 0.01,
+    source: str = "0",
+    show: bool = False,
 ):
     # Avoid extremely low confidence that can create many noisy boxes.
     thresholds = [conf, 0.1, 0.05, 0.01]
