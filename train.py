@@ -120,6 +120,14 @@ def main() -> None:
     )
     model.val(data=str(data_yaml))
 # test the model
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+
 
 if __name__ == "__main__":
     main()
+
+
+
+
