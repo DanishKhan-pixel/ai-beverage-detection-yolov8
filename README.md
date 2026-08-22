@@ -2,7 +2,6 @@
 
 This repo is a small project that looks at a fridge or shelf photo and tries to **spot drinks**, draw boxes around them, and **count** how many of each type it thinks it sees (for example CocaCola, Sprite, and so on). Nothing fancy on the website side — you upload a picture and it shows you the result.
 
----
 
 ## How it actually works (in normal words)
 
@@ -29,9 +28,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-On Windows, use `venv\Scripts\activate` instead of `source venv/bin/activate`.
 
----
 
 ## Where things live in this folder
 
@@ -64,33 +61,9 @@ Example classes from the sample **`data.yaml`** in this repo:
 
 ## Train the model
 
-```bash
-python train.py
-```
-
-
-
----
-
 ## Run from the command line
 
 After you have weights, open **`predict.py`**, set the image path inside if needed, then:
 
 ```bash
 python predict.py
-```
-
-It prints counts and saves an output image (see the script for the exact output path).
-
----
-
-## Run the website
-
-```bash
-python app.py
-```
-
-Then open **http://127.0.0.1:5000** in your browser, upload a jpg/png/webp, and you should see the annotated image plus the counts.
-
----
-

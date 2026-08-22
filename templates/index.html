@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Beverage Detection and Counting</title>
+  <title>Beverage Detection and Counting For Data Collection Purposes</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -86,10 +86,10 @@
   <div class="container">
     <h1>Beverage Object Recognition and Counting</h1>
     <p>Upload a shelf/fridge image to detect beverages and get counts.</p>
+    <p>This is a demo of the beverage detection and counting model. It is not a real-time model and is not trained on any real data.</p>  
 
-    {% if error %}
       <div class="error">{{ error }}</div>
-    {% endif %}
+
 
     <form method="POST" enctype="multipart/form-data">
       <div>
@@ -118,7 +118,6 @@
           {% endif %}
         </ul>
       </div>
-
       <div class="grid">
         <div class="card">
           <h3>Input Image</h3>

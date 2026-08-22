@@ -15,7 +15,6 @@ COMMON_DATA_YAML_PATHS = (
 def _count_images(path: Path) -> int:
     return sum(len(list(path.glob(ext))) for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"))
 
-
 def validate_dataset(data_yaml_path: Path) -> None:
     config = yaml.safe_load(data_yaml_path.read_text())
     dataset_root_raw = Path(config.get("path", "."))
@@ -51,7 +50,6 @@ def validate_dataset(data_yaml_path: Path) -> None:
         raise FileNotFoundError(
             "Dataset label files missing. YOLO labels are required in train/val labels folders."
         )
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train YOLOv8 beverage detector.")
@@ -98,13 +96,13 @@ def resolve_data_yaml(user_path: str | None) -> Path:
         "No data.yaml found. Expected one of: Beverage/data.yaml, dataset/data.yaml, beverage_dataset/data.yaml, or data.yaml."
     )
 
-
 def main() -> None:
     args = parse_args()
     data_yaml = resolve_data_yaml(args.data)
     validate_dataset(data_yaml)
 
     model = YOLO("yolov8n.pt")
+    print(model)
 
     model.train(
         data=str(data_yaml),
@@ -120,10 +118,16 @@ def main() -> None:
         project="runs/detect",
         name="beverage_detect",
     )
-
-    # Runs validation on the best checkpoint and prints metrics.
     model.val(data=str(data_yaml))
+# test the model
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
+# python test.py --weights runs/detect/beverage_detect/weights/best.pt --source 0
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
