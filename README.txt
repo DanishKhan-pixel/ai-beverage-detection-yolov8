@@ -54,10 +54,6 @@ train.py looks for: Beverage/data.yaml, dataset/data.yaml,
 beverage_dataset/data.yaml, or data.yaml
 
 
-Train
------
-python train.py
-
 Optional:
 python train.py --data dataset/data.yaml --epochs 100 --imgsz 640 --batch 8
 
