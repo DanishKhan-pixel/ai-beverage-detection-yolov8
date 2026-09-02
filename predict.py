@@ -89,7 +89,3 @@ def main() -> None:
 
     for label, value in sorted(counts.items()):
         print(f"{label}: {value}")
-
-
-if __name__ == "__main__":
-    main()
