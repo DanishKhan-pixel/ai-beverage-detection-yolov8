@@ -79,8 +79,4 @@ Flask is simple and lightweight for a quick ML inference prototype.
 ### How did you improve robustness?
 By adding confidence fallback and a generic model fallback for edge cases.
 
-### How did you evaluate the model?
-Using train/validation split and standard detection metrics like precision, recall, and mAP.
 
-### What would you do next?
-Scale the dataset, improve model tuning, and deploy the app as a production API.
